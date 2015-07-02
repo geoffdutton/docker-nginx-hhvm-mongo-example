@@ -1,0 +1,99 @@
+# docker-nginx-hhvm-mongo-example
+A docker container with nginx, hhvm, and the hhvm mongofill extension.
+
+###########################################################################################
+#
+# If you're not on a Mac, this may or may not apply.
+# Grab a beer and/or a bowl... this could be a bit
+#
+###########################################################################################
+
+
+# We'll be using HHVM because it's fast as balls
+# http://hhvm.com/
+
+# download and install Boot2Docker: https://github.com/boot2docker/osx-installer/releases
+
+# you need to install VirtualBox first: http://download.virtualbox.org/virtualbox/4.3.28/VirtualBox-4.3.28-100309-OSX.dmg
+# Using boot2docker https://github.com/boot2docker/osx-installer/releases/download/v1.7.0/Boot2Docker-1.7.0.pkg
+
+# Here's the Docker docs that you won't read right now: https://docs.docker.com/
+
+boot2docker up
+
+# you'll see it has some output like below
+
+# Waiting for VM and Docker daemon to start...
+# .............ooo
+# Started.
+# Writing ~/.boot2docker/certs/boot2docker-vm/ca.pem
+# Writing ~/.boot2docker/certs/boot2docker-vm/cert.pem
+# Writing ~/.boot2docker/certs/boot2docker-vm/key.pem
+# Your environment variables are already set correctly.
+
+# When you open a new shell/terminal window, you'll need to initialize
+# the boot2docker environment variables, so I made an alias
+
+# fill in your .aliases 
+echo "alias initb2d='eval $(boot2docker shellinit)'" > ~/.aliases && source ~/.aliases
+
+###########################################################################################
+#
+# Time to build, buckle up
+#
+###########################################################################################
+
+# Let's make sure we have our environment variables set, otherwise you'll see this crap:
+# $ docker ps
+# Get http:///var/run/docker.sock/v1.19/containers/json: dial unix /var/run/docker.sock: no such file or directory. Are you trying to connect to a TLS-enabled daemon without TLS?
+
+initb2d
+cd ~/Projects/docker-nginx-hhvm-example
+
+# build that bitch
+# the -t means what we're calling/tagging this image as
+docker build -t nginx-hhvm-mongo-example .
+
+# you'll see a bunch of output, hopefully it actually works
+
+# if you see "Do you want to continue? [Y/n] Abort", followed by "The command 'bin/sh -c sudo...'"
+# it generally means you for the add the -y argument to the sudo apt-upgrade and/or
+# sudo apt-get install in the Dockerfile
+
+# you should see "Successfully built..."
+# you'll see it listed if you run
+docker images
+
+# Now let's fire it up
+
+# -t=false        : Allocate a pseudo-tty
+# -i=false        : Keep STDIN open even if not attached
+# --rm            : Will remove the container when we're done running, just do it
+# -p              : The port that the docker virtual image will listen, i.e.
+#                     the one we will connect to
+
+docker run -it --rm --name our_first_run -p 9669:80 nginx-hhvm-mongo-example
+
+# it will be running in the foreground, so open another terminal and type:
+initb2d && docker ps
+
+# you should see 'our_first_run'
+
+# Now let's browser to it...
+# 'boot2docker ip' gives you the IP of the virtual machine that's "hosting"
+# the docker container we are running
+open http://$(boot2docker ip):9669
+
+
+# when we're satisfied, let's remove all open containers (there should be only one,
+# but this comes in handy when you start really getting into it)
+
+# docker ps : Lists the current running containers, the -a lists all of the containers
+# Think of a container as a virtual machine instance that you can start and stop
+# while a docker image is a "let's start from scratch and build it from the ground up"
+
+docker stop $(docker ps -a -q)
+docker rm $(docker ps -a -q)
+
+# Finally, let's tag it with a version numbers to sort finalize the build
+docker build -t nginx-hhvm-mongo-example:1.0.0 .
